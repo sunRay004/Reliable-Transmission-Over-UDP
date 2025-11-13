@@ -1,10 +1,12 @@
-from collections import namedtuple
 import socket
 import sys
+import time
 
 # constant values
 MTU = 10 #bytes
 MAX_HEADER_SIZE = 4 #bytes
+WINDOW_SIZE = 50 #bytes
+TIMEOUT = 1 #seconds
 
 adress = "127.0.0.1"
 port = 12345
@@ -38,18 +40,48 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 file = open("testtext.txt", "r")
 filedata = file.read().encode()
 
-packet = namedtuple("packet", ['seq' ,'data','ack'])
-packets: list[packet] = []
+#packet = {'seq': 0,'data' : None, 'ack' : False, 'exp' : 0} # 'seq' ,'data', 'ack', 'exp'
+packets: list[list] = []
 
 for x in range(0,len(filedata)//DATA_SIZE +1):
-    pak = packet(seq=x, data=filedata[x*DATA_SIZE:x*DATA_SIZE+DATA_SIZE],ack=False)
+    pak = [x,filedata[x*DATA_SIZE:x*DATA_SIZE+DATA_SIZE],False,0.0]    # 'seq' ,'data', 'ack', 'exp'
     # filedata[x*DATA_SIZE:x*DATA_SIZE+DATA_SIZE]
     # x,filedata[x*DATA_SIZE:x*DATA_SIZE+DATA_SIZE], False
     packets.append(pak)
 
-for x in packets:
-    payload = int(x.seq).to_bytes(MAX_HEADER_SIZE, byteorder="big", signed=True) + x.data
-    print("sending packet {} with data {} \n".format(x.seq,x.data))
-    sock.sendto(payload,(adress,port))
+traveling = 0 # not num of packets, but amount of mtus that are out, bytes
+sock.setblocking(True)
+curlen = len(packets)
+packets.append([-curlen,b'',False,0.0])
+acked = 0
 
-sock.sendto((-len(packets)).to_bytes(MAX_HEADER_SIZE, byteorder="big", signed=True),(adress,port))
+while True:   # sending + ack loop
+    # payload = int(x.seq).to_bytes(MAX_HEADER_SIZE, byteorder="big", signed=True) + x.data
+    # print("sending packet {} with data {} \n".format(x.seq,x.data))
+    # sock.sendto(payload,(adress,port))
+
+    for x in packets:   # 0'seq'int , 1'data'bytes, 2'ack'bool, 3'exp'float
+        if ((x[3] < time.time()) and (traveling <= WINDOW_SIZE - MTU) and (x[2] == False)):    # packet should be sent, and fits in window
+
+            x[3] = time.time() + TIMEOUT  # set new timeout
+            payload = int(x[0]).to_bytes(MAX_HEADER_SIZE, byteorder="big", signed=True) + x[1]
+            sock.sendto(payload,(adress,port))
+            traveling = traveling + MTU # increment/decrement by mtu
+            print("sent packet number {} with data {}, total bytes in flight is {} \n".format(x[0],x[1],traveling))
+    
+
+    try: 
+        acknowlagement = int.from_bytes(sock.recv(MTU), byteorder="big", signed=True)  # ack = seq, no data
+        if(acknowlagement < 0):
+            acknowlagement = -acknowlagement
+        packets[acknowlagement][2] = True
+        traveling = traveling - MTU
+        acked = acked + 1
+        print("acknowlaged packet number {}, total bytes in flight is {}, total acked {} \n".format(acknowlagement, traveling, acked))
+    except BlockingIOError: 
+        pass
+
+    if(acked == len(packets)):
+        print("done")
+        break
+

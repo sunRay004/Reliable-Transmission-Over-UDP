@@ -46,7 +46,7 @@ while True:
 
     print("got seq {} and data {} \n".format(msgseq,msgdata))
 
-    # send ack even if duplicate
+    # send ack even if duplicate, ack just msgseq
     sock.sendto(msgseq.to_bytes(MAX_HEADER_SIZE, byteorder="big", signed=True),returnAdress)
     
 
