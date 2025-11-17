@@ -1,8 +1,9 @@
 from collections import namedtuple
 import socket
 import sys
+import Test
 
-MTU = 10 #bytes
+MTU = 20 #bytes
 MAX_HEADER_SIZE = 4 #bytes
 
 adress = "127.0.0.1"
@@ -21,7 +22,7 @@ port = 12345
 #     fill array with nulls up to fin seq, then when no nulls left finish
 # combine all back into file
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 for i in range(len(sys.argv)):
     if i == 1:
@@ -31,13 +32,27 @@ for i in range(len(sys.argv)):
 
 packets: list[str|None] = []
 
+sock = Test.sok()
 sock.bind((adress,port))
 
 msgsize = 0
 nullcount = 0
 returnAdress = None
+msgf = []
 while True:
+
+    if(msgsize != 0 and nullcount == 0):
+        if(msgsize == len(packets) - 1):
+            print("DONE")
+            print(msgsize)
+            print(nullcount)
+            print(len(packets))
+            break
+    
+    
     msgf = sock.recvfrom(MTU)   # recieve and get adress
+
+
     msg = msgf[0]
     returnAdress = msgf[1]
     
@@ -63,9 +78,7 @@ while True:
         nullcount = nullcount - 1
     
 
-    if(msgsize != 0 & nullcount == 0):  # recieved fin packet and reached end of message
-        print("done")
-        break
 
-for x in packets:
-    print(x)
+print("Final Message: \n")
+
+print("".join(str(packets))) # type: ignore
