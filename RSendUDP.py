@@ -1,3 +1,4 @@
+import math
 import socket
 import sys
 import time
@@ -44,7 +45,7 @@ filedata = file.read().encode()
 #packet = {'seq': 0,'data' : None, 'ack' : False, 'exp' : 0} # 'seq' ,'data', 'ack', 'exp'
 packets: list[list] = []
 
-for x in range(0,len(filedata)//DATA_SIZE):
+for x in range(0,math.ceil(len(filedata)/DATA_SIZE)):
     pak = [x,filedata[x*DATA_SIZE:x*DATA_SIZE+DATA_SIZE],False,0.0]    # 'seq' ,'data', 'ack', 'exp'
     # filedata[x*DATA_SIZE:x*DATA_SIZE+DATA_SIZE]
     # x,filedata[x*DATA_SIZE:x*DATA_SIZE+DATA_SIZE], False

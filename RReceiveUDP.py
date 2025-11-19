@@ -81,4 +81,13 @@ while True:
 
 print("Final Message: \n")
 
-print("".join(str(packets))) # type: ignore
+finalMSGarray: list[str] = []
+for x in packets:
+    finalMSGarray.append(str(x))
+
+finalMSG = "".join(finalMSGarray)
+
+print(finalMSG)
+
+with open('testoutput.txt', 'w') as file:
+    file.write(finalMSG)
